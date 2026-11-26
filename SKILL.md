@@ -1,15 +1,14 @@
 ---
 name: net-claude-chain
-description: Set up dedicated Claude Web and Claude Desktop on Windows using a Singapore ByteVirt VPS and a Singapore CLIProxy static residential IP. Operate the real checkout up to human payment, then deploy both launchers, startup, and IP verification. 用于部署 Claude 专用网络、新加坡出口、Edge 或 Chrome 专用窗口和桌面端自动恢复。
+description: Open the Singapore ByteVirt and CLIProxy websites, prepare human checkout, and resume automatically after payment. Deploy the Windows Claude network, download official Claude Desktop when needed, and open the web, desktop, and IP verification entries. 用于新加坡 Claude 专用网络、付款后自动部署和桌面端安装。
 ---
 
 # net-claude-chain
 
-一句「使用 net-claude-chain」开始执行。先核对已有资源及电脑环境，只采购缺的。固定使用**新加坡 ByteVirt VPS + 新加坡 CLIProxy 独享静态住宅 IP**。已经买好两项资源、尚未部署时，跳过付款并自动从零部署。部署完成交付 Windows 桌面上的 `Claude 专用网络` 文件夹。
+收到「使用 net-claude-chain」后直接执行。固定使用**新加坡 ByteVirt VPS + 新加坡 CLIProxy 独享静态住宅 IP**。先核对已有资源，只处理缺少的项目。两项资源都已开通时直接部署。
 
-1. 读取 [采购流程](references/workflow.md)。用浏览器操作指定商家，推进到可付款页面。需要登录、验证或实际付款时交还控制。用户说「已付」后核实到账与开通。有合格资源就直接复用。
-2. 读取 [部署流程](references/deployment.md)。首次部署使用仓库脚本从 Debian 空环境安装依赖、生成服务端配置、创建开机服务，再部署 Windows 客户端和后台任务。自动安装或注册官方 Claude Desktop。网页优先使用已装的 Chrome，其次 Edge，两者都没有才安装官方 Chrome。
-3. 读取 [验收流程](references/acceptance.md)。分别打开网页、桌面端和 IP 检测入口。验证实际出口、断开后的行为和恢复。检测网站为 https://ip.net.coffee/ip/。
-4. 留下三个入口 `Claude 网页版`、`Claude 桌面端`、`检测出口 IP`。告诉用户入口所在位置、各项实测和需要其登录的界面。
+1. 读[采购流程](references/workflow.md)。Agent 自动打开所需商家的页面，核对并操作到能付款的页面。付款由用户操作。订单状态可读时继续检查到账和开通；需要交接浏览器时，用户交还控制后恢复检查，无需再发「已付」。
+2. 读[部署流程](references/deployment.md)。资源开通后立即用仓库脚本部署 VPS 和 Windows。电脑缺少 Claude Desktop 时自动下载、验签并安装官方版本。网页版优先使用已装的 Chrome，其次 Edge，两者都没有才安装 Chrome。
+3. 读[验收流程](references/acceptance.md)。Agent 实际打开 **Claude 网页版**、**Claude 桌面端**和 **检测出口 IP**，通过专用窗口验证出口、断开和恢复。入口都在 Windows 桌面的 **Claude 专用网络** 文件夹。
 
-Agent 执行命令和配置。需要用户操作时，一次说明当前位置和要点，收到控制权后继续。保留用户原有 VPN、默认浏览器和日常浏览器资料。独享浏览器指独立资料目录和固定代理。需要人为登录 Claude 时保留界面，用户在官方界面登录。只对已完成的测试报告通过。
+需要登录、验证码或本机授权时，只把该操作交给用户，完成后继续同一流程。Claude 首次登录在官方界面中进行，打开网页和应用无需等待用户登录。保留用户已有 VPN、默认浏览器和日常浏览器资料。交付时报告实际打开、安装、验证及仍待处理的项。

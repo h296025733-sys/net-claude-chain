@@ -10,7 +10,7 @@ Agent 执行以下步骤。两个资源已开通时跳过购买。若 VPS 没有
 4. 新服务默认监听 443。先通过 `ss` 检查端口和商家后台的入站规则，遇到占用使用允许且空闲的端口并传 `--listen`。代理端口默认监听 Windows 环回地址 10810。遇到本机冲突时用 `--local-port` 选择空闲端口，并在后续传相同端口。保存经验证的 VPS SSH 主机密钥。临时凭据上传后检查 0600，脚本读完即清理临时输入。
 5. SCP 取回 `/etc/net-claude-chain/client.json` 至已保护的临时文件。它含连接凭据。先用上面下载的 Windows Xray临时启动 `xray.exe run -c <客户端配置>`，经此环回代理访问 `https://api.ipify.org`，核对与住宅出口一致。确认后停止测试进程，执行 `systemctl stop net-claude-chain-safety.timer` 和 `systemctl enable net-claude-chain-guard.service net-claude-chain.service`。安全定时器为 180 秒。超时后核查服务，重新启动这两项服务，再充分验证。
 6. 在当前 Windows 用户的管理员 PowerShell 执行 `scripts/install-windows-client.ps1`，带上新客户端配置、Windows Xray 路径、VPS 地址、住宅出口及本机端口。脚本配置开机代理、物理网卡路由、Claude 官方桌面版、应用出站限制和三个快捷方式。保留当前的默认浏览器。两种浏览器都缺失时装官方 Chrome。注册官方 Claude Desktop 使用 [Anthropic 的 Windows MSIX](https://support.claude.com/en/articles/12622703-deploy-claude-desktop-for-windows)。如果已有普通 Claude 窗口，保存工作并退出后再让专用任务启动。
-7. 用 [验收步骤](acceptance.md) 检查网页、桌面端和检测入口。记录本机配置路径和服务到期时间。清理临时凭据文件。
+7. 安装器结束后，Agent 立即按 [验收步骤](acceptance.md) 实际打开网页版、桌面端和检测入口，再验证结果。记录本机配置路径和服务到期时间。清理临时凭据文件。
 
 ```bash
 sudo python3 deploy-singapore-server.py --vps-ip "$VPS_IP" --credentials "$CREDENTIALS_FILE"
