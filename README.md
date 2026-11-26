@@ -1,0 +1,17 @@
+# net-claude-chain
+
+在 Windows 上用 Agent 部署 Claude 专用网络，固定使用新加坡 ByteVirt VPS 和新加坡 CLIProxy 独享静态住宅 IP。
+
+## 用法
+
+把本仓库地址发给能操作浏览器和本机的 Agent，请它安装并使用 `net-claude-chain`。已经安装过，在新会话中说 `使用 net-claude-chain` 即可。
+
+Agent 检查已有资源，缺什么就准备什么的付款页。你在商家页面付款后，回到 Agent 发 `已付`。已经买好但还没配置时，从空白 Debian VPS 和 Windows 开始部署。部署好后，在 Windows 桌面的 **Claude 专用网络** 文件夹选择入口。
+
+| 入口 | 打开什么 |
+| --- | --- |
+| Claude 网页版 | 用专用 Chrome 或 Edge 打开 Claude 网页 |
+| Claude 桌面端 | 打开已配置的官方 Claude 应用 |
+| 检测出口 IP | 用专用浏览器打开 Net.Coffee |
+
+登录 Claude 时，在它打开的官方界面内操作。脚本及流程以 [SKILL.md](SKILL.md) 为入口。
