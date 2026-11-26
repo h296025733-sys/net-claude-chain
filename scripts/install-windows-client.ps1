@@ -57,7 +57,11 @@ if ($XrayExecutable) {
     New-Item -ItemType Directory -Path $daemon -Force | Out-Null
     & icacls.exe $daemon /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' | Out-Null
     if ($LASTEXITCODE -ne 0) { throw 'Could not protect the proxy config.' }
-    Copy-Item -LiteralPath $XrayExecutable -Destination (Join-Path $daemon 'xray.exe') -Force
+    $installedXray=Join-Path $daemon 'xray.exe'
+    if (-not (Test-Path -LiteralPath $installedXray -PathType Leaf) -or
+        (Get-FileHash -LiteralPath $installedXray).Hash -ne (Get-FileHash -LiteralPath $XrayExecutable).Hash) {
+        Copy-Item -LiteralPath $XrayExecutable -Destination $installedXray -Force
+    }
     foreach ($name in @('geoip.dat','geosite.dat')) {
         $source=Join-Path (Split-Path -Parent $XrayExecutable) $name
         if (Test-Path -LiteralPath $source) { Copy-Item -LiteralPath $source -Destination $daemon -Force }
@@ -116,7 +120,8 @@ try {
             Get-OfficialPackage "https://claude.ai/api/desktop/win32/$arch/msix/latest/redirect" $ClaudePackage
         }
         $sig=Get-AuthenticodeSignature -LiteralPath $ClaudePackage
-        if ($sig.Status -ne 'Valid' -or $sig.SignerCertificate.Subject -notmatch '(?:CN|O)=Anthropic') {
+        if ($sig.Status -ne 'Valid' -or -not $sig.SignerCertificate -or
+            $sig.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -ne 'Anthropic, PBC') {
             throw 'Claude MSIX signature verification failed.'
         }
         Add-AppxPackage -Path $ClaudePackage -ErrorAction Stop
