@@ -15,12 +15,16 @@ function Get-SupportedBrowsers {
     }
 }
 
-function Get-ClaudeExecutable([string]$UserSid='') {
+function Get-ClaudePackage([string]$UserSid='') {
     $query=@{Name='Claude'}
     if ($UserSid) { $query.User=$UserSid }
-    $package=Get-AppxPackage @query | Where-Object PackageFamilyName -eq 'Claude_pzs8sxrjxfjjc' |
+    Get-AppxPackage @query | Where-Object PackageFamilyName -eq 'Claude_pzs8sxrjxfjjc' |
         Sort-Object Version -Descending | Select-Object -First 1
-    if ($package) {
+}
+
+function Get-ClaudeExecutable([string]$UserSid='') {
+    $package=Get-ClaudePackage $UserSid
+    if ($package.InstallLocation) {
         $exe=Join-Path $package.InstallLocation 'app\claude.exe'
         if (Test-Path -LiteralPath $exe -PathType Leaf) { return $exe }
     }

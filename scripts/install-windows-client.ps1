@@ -5,10 +5,21 @@ param(
     [ValidateRange(1,65535)][int]$ProxyPort=10810,
     [string]$XrayExecutable,
     [string]$ClientConfig,
-    [string]$ClaudePackage
+    [string]$ClaudePackage,
+    [string[]]$ClaudeProjectPath,
+    [switch]$RepairClaudeDesktop,
+    [switch]$ReinstallClaudeDesktop
 )
 $ErrorActionPreference='Stop'
 . (Join-Path $PSScriptRoot 'windows-client-common.ps1')
+. (Join-Path $PSScriptRoot 'claude-desktop-maintenance.ps1')
+$desktop=Get-ClaudeDesktopState
+$desktopNeedsSetup=$desktop.State -ne 'Healthy' -or $RepairClaudeDesktop -or $ReinstallClaudeDesktop
+if ($ReinstallClaudeDesktop -and -not $desktop.Package) { throw 'There is no registered Claude Desktop package to reinstall.' }
+if ($desktopNeedsSetup -and
+    (Get-Process -Name Claude -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId)) {
+    throw 'Save open work and quit Claude before installing or repairing Claude Desktop.'
+}
 foreach ($address in @($VpsIp,$ExpectedExit)) {
     $parsed=$null
     if (-not [Net.IPAddress]::TryParse($address,[ref]$parsed) -or $parsed.AddressFamily -ne 'InterNetwork') {
@@ -94,6 +105,8 @@ function Get-OfficialPackage([string]$Url,[string]$Destination) {
     throw "Official installer download failed (curl $result): $Url"
 }
 
+$desktopAction='Reused'
+$desktopBackup=$null
 $stage=New-Item -ItemType Directory -Path (Join-Path $env:TEMP ("NetClaudeChain-"+[guid]::NewGuid().ToString('N')))
 try {
     if (-not @(Get-SupportedBrowsers).Count) {
@@ -108,7 +121,7 @@ try {
             throw 'The Chrome installer did not produce a supported browser.'
         }
     }
-    if (-not (Get-ClaudeExecutable)) {
+    if ($desktopNeedsSetup) {
         if (-not $ClaudePackage) {
             $arch=switch ($env:PROCESSOR_ARCHITECTURE) {
                 'AMD64' {'x64'}; 'ARM64' {'arm64'}; default { throw 'Unsupported Windows architecture for Claude Desktop.' }
@@ -121,7 +134,41 @@ try {
             $sig.SignerCertificate.GetNameInfo([Security.Cryptography.X509Certificates.X509NameType]::SimpleName, $false) -ne 'Anthropic, PBC') {
             throw 'Claude MSIX signature verification failed.'
         }
-        Add-AppxPackage -Path $ClaudePackage -ErrorAction Stop
+        if ($ReinstallClaudeDesktop) {
+            Add-Type -AssemblyName System.IO.Compression.FileSystem
+            $archive=[IO.Compression.ZipFile]::OpenRead((Get-Item -LiteralPath $ClaudePackage).FullName)
+            try {
+                $manifestReader=[IO.StreamReader]::new($archive.GetEntry('AppxManifest.xml').Open())
+                try { [xml]$manifest=$manifestReader.ReadToEnd() } finally { $manifestReader.Dispose() }
+                $packageIdentity=$manifest.Package.Identity
+                if ($packageIdentity.Name -cne 'Claude' -or $packageIdentity.ProcessorArchitecture -ne $desktop.Package.Architecture) {
+                    throw 'The signed MSIX does not match the installed Claude Desktop package name and architecture.'
+                }
+            } finally { $archive.Dispose() }
+        }
+        $desktopBackup=Backup-ClaudeLocalData $ClaudeProjectPath
+        try {
+            if (Get-Process -Name Claude -ErrorAction SilentlyContinue | Where-Object SessionId -eq (Get-Process -Id $PID).SessionId) {
+                throw 'Claude opened during setup. Save your work, quit the app, and rerun setup.'
+            }
+            if ($ReinstallClaudeDesktop) {
+                $currentPackage=Get-ClaudePackage
+                if ($currentPackage.PackageFullName -ne $desktop.Package.PackageFullName) {
+                    throw 'Claude Desktop changed during setup. Recheck the installation before removing it.'
+                }
+                Remove-AppxPackage -Package $currentPackage.PackageFullName -ErrorAction Stop
+                $desktopAction='Reinstalled'
+            } elseif ($desktop.Package) {
+                $desktopAction='Repaired'
+            } else {
+                $desktopAction='Installed'
+            }
+            Add-AppxPackage -Path $ClaudePackage -ErrorAction Stop
+            if ((Get-ClaudeDesktopState).State -ne 'Healthy') { throw 'Claude Desktop package still needs repair.' }
+        } catch {
+            if ($desktopBackup) { Write-Warning "Claude local data backup: $desktopBackup" }
+            throw
+        }
     }
 } finally {
     Get-ChildItem -LiteralPath $stage.FullName -File | Remove-Item -Force
@@ -135,4 +182,4 @@ Set-DesktopFirewall $productRoot
 Assert-DesktopFirewall $productRoot
 
 $entries=& (Join-Path $PSScriptRoot 'update-windows-launchers.ps1')
-[pscustomobject]@{Shortcuts=$entries;Browsers=@(Get-SupportedBrowsers).Name;ClaudeDesktop=$claude;Proxy=$proxy}
+[pscustomobject]@{Shortcuts=$entries;Browsers=@(Get-SupportedBrowsers).Name;ClaudeDesktop=$claude;ClaudeDesktopAction=$desktopAction;ClaudeDataBackup=$desktopBackup;Proxy=$proxy}
