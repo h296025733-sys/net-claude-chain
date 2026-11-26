@@ -105,3 +105,19 @@ function Assert-DesktopFirewall([string]$ProductRoot) {
         Where-Object { $_.Enabled -eq 'True' -and $_.Direction -eq 'Outbound' -and $_.Action -eq 'Block' })
     if ($names | Where-Object { $_ -notin $active.Name }) { throw 'The dedicated Claude firewall rules are not active.' }
 }
+
+function Remove-LegacyClaudeDesktopTask {
+    $name='NetClaudeChain-Desktop'
+    $launcher=Join-Path $env:ProgramData 'NetClaudeChain\claude-client.ps1'
+    $task=Get-ScheduledTask -TaskName $name -TaskPath '\' -ErrorAction SilentlyContinue
+    if (-not $task) { return }
+    $owned=$task.Actions | Where-Object {
+        $_.Execute -match 'powershell(?:\.exe)?$' -and
+        $_.Arguments -match [regex]::Escape($launcher) -and
+        $_.Arguments -match '-Mode\s+Watch\b'
+    }
+    if (-not $owned) { return }
+    Disable-ScheduledTask -TaskName $name -TaskPath '\' | Out-Null
+    Stop-ScheduledTask -TaskName $name -TaskPath '\'
+    Unregister-ScheduledTask -TaskName $name -TaskPath '\' -Confirm:$false
+}

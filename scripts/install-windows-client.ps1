@@ -21,16 +21,13 @@ $principal=[Security.Principal.WindowsPrincipal]::new($identity)
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Run setup as an administrator in the interactive user account.' }
 $root=Join-Path $env:ProgramData 'NetClaudeChain'
 $profile=Join-Path $env:LOCALAPPDATA 'NetClaudeChain\Profiles'
-$desktop=[Environment]::GetFolderPath('DesktopDirectory')
-if (-not $desktop) { throw 'The signed-in Windows user has no desktop folder.' }
-$labels=Get-Content -LiteralPath (Join-Path $PSScriptRoot 'windows-shortcuts.json') -Raw -Encoding UTF8 | ConvertFrom-Json
-$entries=Join-Path $desktop $labels.Folder
+Remove-LegacyClaudeDesktopTask
 $psExe=Join-Path $env:SystemRoot 'System32\WindowsPowerShell\v1.0\powershell.exe'
 New-Item -ItemType Directory -Path $root,$profile -Force | Out-Null
 if ((Get-Item -LiteralPath $root).Attributes -band [IO.FileAttributes]::ReparsePoint) { throw 'Unexpected redirected runtime directory.' }
 & icacls.exe $root /inheritance:r /grant:r '*S-1-5-18:(OI)(CI)F' '*S-1-5-32-544:(OI)(CI)F' '*S-1-5-32-545:(OI)(CI)RX' | Out-Null
 if ($LASTEXITCODE -ne 0) { throw 'Could not protect Windows runtime.' }
-foreach ($file in @('windows-client-common.ps1','claude-client.ps1','run-windows-proxy.ps1')) {
+foreach ($file in @('windows-client-common.ps1','run-windows-proxy.ps1')) {
     Copy-Item -LiteralPath (Join-Path $PSScriptRoot $file) -Destination (Join-Path $root $file) -Force
 }
 @{VpsIp=$VpsIp;ExpectedExit=$ExpectedExit;ProxyPort=$ProxyPort;ProfileRoot=$profile;UserSid=$identity.User.Value} |
@@ -137,21 +134,5 @@ $productRoot=Split-Path -Parent $claude
 Set-DesktopFirewall $productRoot
 Assert-DesktopFirewall $productRoot
 
-New-Item -ItemType Directory -Path $entries -Force | Out-Null
-$shell=New-Object -ComObject WScript.Shell
-function New-LandingShortcut($Name,$Mode,$Icon) {
-    $shortcut=$shell.CreateShortcut((Join-Path $entries "$Name.lnk"))
-    $shortcut.TargetPath=$psExe
-    $shortcut.Arguments='-NoProfile -WindowStyle Hidden -ExecutionPolicy Bypass -File "{0}" -Mode {1}' -f (Join-Path $root 'claude-client.ps1'),$Mode
-    $shortcut.WorkingDirectory=$root
-    $shortcut.IconLocation="$Icon,0"
-    $shortcut.Save()
-}
-$browser=(Get-SupportedBrowsers | Select-Object -First 1).Path
-New-LandingShortcut $labels.Web 'Web' $browser
-New-LandingShortcut $labels.Desktop 'Desktop' $claude
-New-LandingShortcut $labels.Check 'Check' $browser
-$user=New-ScheduledTaskPrincipal -UserId $identity.Name -LogonType Interactive -RunLevel Limited
-Register-LocalTask 'NetClaudeChain-Desktop' 'claude-client.ps1' '-Mode Watch' (New-ScheduledTaskTrigger -AtLogOn -User $identity.Name) $user
-Start-ScheduledTask -TaskName 'NetClaudeChain-Desktop'
+$entries=& (Join-Path $PSScriptRoot 'update-windows-launchers.ps1')
 [pscustomobject]@{Shortcuts=$entries;Browsers=@(Get-SupportedBrowsers).Name;ClaudeDesktop=$claude;Proxy=$proxy}
