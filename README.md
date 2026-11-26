@@ -4,7 +4,9 @@
 
 ## 用法
 
-把本仓库地址发给能操作浏览器和本机的 Agent，请它安装并使用 `net-claude-chain`。已经安装过，在新会话中说 `使用 net-claude-chain` 即可。
+把下面这一句发给能操作浏览器和本机的 Codex Agent。
+
+> 请从 https://github.com/h296025733-sys/net-claude-chain 下载安装并使用 net-claude-chain。
 
 Agent 检查已有资源，缺什么就准备什么的付款页。你在商家页面付款后，回到 Agent 发 `已付`。已经买好但还没配置时，从空白 Debian VPS 和 Windows 开始部署。部署好后，在 Windows 桌面的 **Claude 专用网络** 文件夹选择入口。
 
